@@ -1,0 +1,8 @@
+FROM quay.io/centos/centos:stream10
+
+RUN dnf install -y vim python3-pip sqlite && \
+    dnf clean all
+
+RUN pip install ollama chromadb
+
+COPY rag.py /root/rag.py
