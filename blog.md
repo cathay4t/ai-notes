@@ -17,7 +17,6 @@ When AI not preforming well:
    has no pre-trained data on JSON handling of `pw-dump`.
  * Logic on filter information of `pw-dump`.
 
-
 ## Limit AI reply by Retrieval-Augmented Generation
 
 Please check this [screencast][rag_screencast] to understand how RAG works by
@@ -84,4 +83,4 @@ suggestions without any AI delusion.
     and `cargo docs` for non-std crates
 
 [2]: https://github.com/ollama/ollama/blob/main/docs/api.md#generate-embeddings
-[rag_screencast]: TODO
+[rag_screencast]: internal_only

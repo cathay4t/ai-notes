@@ -2,8 +2,9 @@
 
 import ollama
 import chromadb
+import datetime
 
-documents = [
+DOCUMENTS = [
     r"""
     Rust document for Vec::sort():
 
@@ -96,30 +97,81 @@ assert_eq!(v, [4, 2, 1, -3, -5]);
             """,
 ]
 
-MODEL="mxbai-embed-large"
+# granite-embedding does not support ollama embedding API
+# EMBED_MODEL = "granite-embedding:278m"
 
-db_client = chromadb.Client()
-ollama_client = ollama.Client(host='http://172.17.2.6:11434')
-db_collection = db_client.create_collection(name="rust_docs")
+# granite3.2:8b is accurate
+EMBED_MODEL = "granite3.2:8b"
 
-for i, d in enumerate(documents):
-    response = ollama_client.embed(model=MODEL, input=d)
-    embeddings = response["embeddings"]
-    db_collection.add(ids=[str(i)], embeddings=embeddings, documents=[d])
+# granite-code:20b is accurate
+# EMBED_MODEL = "granite-code:20b"
+
+# mxbai is accurate
+# EMBED_MODEL = "mxbai-embed-large"
+
+# Nomic is quick but wrong
+# EMBED_MODEL = "nomic-embed-text"
+
+# qwen3 is accurate
+# EMBED_MODEL = "qwen3:14b"
+# LLM_MODEL = "granite-code:20b"
+LLM_MODEL = "granite3.2:8b"
+# LLM_MODEL = "qwen2.5-coder:14b"
+# LLM_MODEL = "qwen3:14b"
+# LLM_MODEL = "deepseek-coder-v2:16b"
 
 
+def feed_doc_to_rag(ollama_client, db_client, documents):
+    start_time = datetime.datetime.now()
+    for i, d in enumerate(documents):
+        response = ollama_client.embed(model=EMBED_MODEL, input=d)
+        embeddings = response["embeddings"]
+        db_client.add(ids=[str(i)], embeddings=embeddings, documents=[d])
+    print(f"Loading RAG cost: {get_elapsed(start_time)}")
 
-def get_reply(question):
-    response = ollama_client.embed(
-      model=MODEL,
-      input=question
+
+def get_reply(ollama_client, db_client, question):
+    start_time = datetime.datetime.now()
+
+    response = ollama_client.embed(model=EMBED_MODEL, input=question)
+
+    rag_results = db_client.query(
+        query_embeddings=response["embeddings"], n_results=1
+    )["documents"][0][0]
+
+    print(f"RAG reply:\n\n{rag_results}\n")
+    print(f"RAG time cost: {get_elapsed(start_time)}")
+
+    # generate a response combining the prompt and data we retrieved in step 2
+    llm_result = ollama_client.generate(
+        model=LLM_MODEL,
+        prompt=f"Using this data: {rag_results}. "
+        f"Respond to this prompt: {question}",
+    )["response"]
+
+    print(f"RAG-LLM reply:\n\n{llm_result}\n")
+    print(f"RAG-LLM time cost: {get_elapsed(start_time)}")
+
+    return llm_result
+
+
+def get_elapsed(start):
+    elapsed = datetime.datetime.now() - start
+    return f"{elapsed.seconds} seconds {elapsed.microseconds / 1000} ms"
+
+
+def main():
+    db_client = chromadb.Client()
+    ollama_client = ollama.Client(host="http://172.17.2.6:11434")
+    db_client = db_client.create_collection(name="rust_docs")
+    print(
+        f"RAG module {EMBED_MODEL}, LLM model {LLM_MODEL} "
+        f"DB chromadb-{chromadb.__version__}"
     )
-
-    results = db_collection.query(
-      query_embeddings=response["embeddings"],
-      n_results=1
-    )
-    return results['documents'][0][0]
+    feed_doc_to_rag(ollama_client, db_client, DOCUMENTS)
+    question = "Document of rust Vec::sort_unstable()"
+    print(f"Real question {question}\n")
+    get_reply(ollama_client, db_client, question)
 
 
-print(get_reply("how to sort a Vec"))
+main()
