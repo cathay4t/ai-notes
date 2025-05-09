@@ -1,5 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
+# This script is modified based on the code share at
+# https://ollama.com/blog/embedding-models
+# The modification is licensed at Apache-2.0.
+
 import ollama
 import chromadb
 import datetime

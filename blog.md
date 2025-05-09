@@ -25,45 +25,11 @@ using `chromadb` and [ollama embedding][2].
 The code is based on the work https://ollama.com/blog/embedding-models with
 small fixes on typo and API changes.
 
-Example code could be found:
+Example code could be found at https://github.com/cathay4t/ai-notes/blob/main/rag.py
 
-```python
-import ollama
-import chromadb
-
-documents = [
-    r"""copyrust document of each functions here""",
-]
-
-MODEL="mxbai-embed-large"
-
-db_client = chromadb.Client()
-ollama_client = ollama.Client(host='http://172.17.2.6:11434')
-db_collection = db_client.create_collection(name="rust_docs")
-
-for i, d in enumerate(documents):
-    response = ollama_client.embed(model=MODEL, input=d)
-    embeddings = response["embeddings"]
-    db_collection.add(ids=[str(i)], embeddings=embeddings, documents=[d])
-
-
-
-def get_reply(question):
-    response = ollama_client.embed(
-      model=MODEL,
-      input=question
-    )
-
-    results = db_collection.query(
-      query_embeddings=response["embeddings"],
-      n_results=1
-    )
-    return results['documents'][0][0]
-
-print(get_reply("how to sort a Vec"))
-```
-
-TODO: passing RAG results to LLM
+RAG will search out the most related pre-defined documents based on your
+questions, then you can redirect the these documents to LLM seeking for better
+replies.
 
 Further reading: https://techcommunity.microsoft.com/blog/azuredevcommunityblog/doing-rag-vector-search-is-not-enough/4161073
 
@@ -78,9 +44,8 @@ For non-Rust coding, I will use AI as quicker search engine than google.
 Enterprise company could use RAG(with or without LLM) to provide 100% accurate
 suggestions without any AI delusion.
 
-[1]: $HOME/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/share/doc/rust/html/std/index.html
-    after `rustup component add rust-docs-x86_64-unknown-linux-gnu`
-    and `cargo docs` for non-std crates
+[1]: After `rustup component add rust-docs-x86_64-unknown-linux-gnu`
+and `cargo docs` for non-std crates
 
 [2]: https://github.com/ollama/ollama/blob/main/docs/api.md#generate-embeddings
 [rag_screencast]: internal_only
